@@ -14,9 +14,7 @@ from std_srvs.srv import SetBool, SetBoolResponse, SetBoolRequest
 class AR_path_Node():
     def __init__(self):
         self.ar_maker_sub = rospy.Subscriber('ar_pose_marker ',AlvarMarker,self.ar_pose_callback)
-        self.srv = rospy.Service('test_speak', SetBool, self.callback_srv)
-        self.cmd_vel_pub =rospy.Publisher("cmd_vel",Twist,1)
-        self.srv = rospy.Service('test_speak', SetBool, self.callback_srv)
+        self.srv = rospy.Service('move', SetBool, self.callback_srv)
         self.cmd_vel_pub =rospy.Publisher("cmd_vel",Twist,1)
         self.ar = AlvarMarker()
         self.vel = Twist()
@@ -26,39 +24,75 @@ class AR_path_Node():
         self.target_pose_x
         #self.target_pose_y
         self.target_pose_z
-        self.target_id
         self.x_thr = 0.1
         self.z_thr = 0.2
+        self.detect_target_ar_flg =False
+        self.move_flg =False
         # self.pub = rospy.Publisher('topic name', String, queue_size=1)
+        self.current_num =0
+        self.target_id_list = [0,1,2,3,4]
+        self.target_action_list = ["right","left","left","left","right"]
+        self.target_id  =self.target_id_list[self.current_num]
+        self.target_action = self.target_action_list[self.current_num]
 
     def ar_pose_callback(self,data):
         self.ar.pose.pose.orientation.w
-        self.ar_pose = self.data.id
-        self.ar_pose_x = self.data.pose.pose.position.x
-        self.ar_pose_z = self.data.pose.pose.position.z
-        self.ar_pose_z = self.data.pose.pose.orientation
-        self.detect_flg =True
+        self.ar_id = data.id
+        self.ar_pose_x = data.pose.pose.position.x
+        self.ar_pose_z = data.pose.pose.position.z
+        self.ar_pose_z = data.pose.pose.orientation
+        if self.ar_id == self.target_id:
+            self.detect_target_ar_flg = True
 
     def callback_srv(self,data):
         resp = SetBoolResponse()
-        if data.data == True:
-            play_sound = self.auto_sound.play()
-            play_sound.wait_done()
+        self.move_flg = data.data
+        resp.message = "catch move_flg !!"
+        resp.success = True
+        return resp
+    def read_list(self):
+        if self.current_num >= len(self.target_id_list):
+            self.current_num = 0
+        self.target_action = self.target_action_list[self.current_num]
+        self.target_action = self.target_id_list[self.current_num]
 
     def path_function(self):
         a = (self.target_pose_z - 0) / (self.target_pose_x - 0)
     
     def track_ar(self):
-        if (self.track_flg and abs(self.ar_pose_x) >= self.z_thr and abs(self.ar_pose_z) >= self.x_thr):
-            self.vel.linear.x = 0.2 * (self.ar_pose_z - self.z_thr)
-            self.vel.angular.z = 0.2 * self.ar_pose_x
-            self.cmd_vel_pub.publish(self.vel)
-        else:
-            self.track_flg = False
+        if self.move_flg:
+            if (self.track_flg):
+                if (abs(self.ar_pose_x) >= self.z_thr and abs(self.ar_pose_z) >= self.x_thr):
+                    self.vel.linear.x = 0.2 * (self.ar_pose_z - self.z_thr)
+                    self.vel.angular.z = 0.2 * self.ar_pose_x
+                    self.cmd_vel_pub.publish(self.vel)
+                    print("move for target AR_marker")
+                else:
+                    self.track_flg = False
+                    print("reach target AR_marker !!")
+                    self.current_num = self.current_num + 1
+                    self.read_list()
+                    if self.target_id ==3 or self.target_id == 0:
+                        self.move_flg = False
+            else:
+                self.detect_target_ar_flg = False
+    
+    def search_sr(self):
+        if self.move_flg:
+            if self.detect_target_ar_flg==False:
+                print("search AR_marker")
+                if self.target_action == "right":
+                    self.vel.angular.z = 0.2
+                if self.target_action == "left":
+                    self.vel.angular.z  = -0.2
+                self.cmd_vel_pub.publish(self.vel)
+            else :
+                print("detect AR_marker")
+                self.track_flg =True
     # def track_ori(self):
         
 if __name__ == '__main__':
-    rospy.init_node('test_node')
+    rospy.init_node('track_ar_node')
 
     time.sleep(1.0)
     ar_path_node = AR_path_Node()
