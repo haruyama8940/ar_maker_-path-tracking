@@ -1,0 +1,5 @@
+<launch>
+
+<node name="ar_maker_path_tracking" pkg="ar_maker_path_tracking" type="create_path.py" respawn="false" output="screen"/>
+
+</launch>
