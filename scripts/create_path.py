@@ -25,7 +25,7 @@ class AR_path_Node():
         #self.target_pose_y
         self.target_pose_z =0
         self.x_thr = 0.1
-        self.z_thr = 0.1
+        self.z_thr = 0.18
         self.detect_target_ar_flg =False
         self.move_flg =True
         self.track_flg =False
@@ -43,18 +43,21 @@ class AR_path_Node():
         self.ar_maker_data = data.markers
         if len(self.ar_maker_data) ==0:
             self.detect_target_ar_flg=False
+            print("maigo")
+            # self.search_ar()
         
         for m in self.ar_maker_data:
             self.ar_id = m.id
             self.ar_pose_x = m.pose.pose.position.x
             self.ar_pose_z = m.pose.pose.position.z
             self.ar_pose_w = m.pose.pose.orientation.w
-            print("detect id",self.ar_id)
+            # print("detect id",self.ar_id)
         if self.ar_id == self.target_id:
             print("target_maker")
             self.detect_target_ar_flg = True
         else :
             self.detect_target_ar_flg =False
+            self.search_ar()
 
     def callback_srv(self,data):
         resp = SetBoolResponse()
@@ -77,41 +80,58 @@ class AR_path_Node():
         if self.move_flg:
             if (self.track_flg):
                 print(type(self.ar_pose_x))
-                if (abs(self.ar_pose_x) >= self.z_thr and abs(self.ar_pose_z) >= self.x_thr):
-                    self.vel.linear.x = 0.1 * (self.ar_pose_z - self.x_thr)
-                    self.vel.angular.z = -0.1 * (self.ar_pose_x -0)
+                if (abs(self.ar_pose_z) >= self.z_thr or abs(self.ar_pose_x) >= self.x_thr):
+                    self.vel.linear.x = 0.1 * (self.ar_pose_z - 0)
+                    # self.vel.linear.x =0.1
+                    self.vel.angular.z = -0.1 * 2 * (self.ar_pose_x - 0)
                     self.cmd_vel_pub.publish(self.vel)
                     print("move for target AR_marker")
                 else:
                     self.track_flg = False
                     print("reach target AR_marker !!")
-                    self.current_num = self.current_num + 1
-                    self.read_list()
-                    if self.target_id ==3 or self.target_id == 0:
+                    # print("read")
+                    # self.current_num = self.current_num + 1
+                    # self.read_list()
+                    if self.target_id == 2 or self.target_id == 0:
                         print("wait")
                         self.move_flg = False
+                    print("read")
+                    self.current_num = self.current_num + 1
+                    self.read_list()
+                    # self.current_num = self.current_num + 1
+                    # self.read_list()
             else:
                 self.detect_target_ar_flg = False
+        else:
+            self.vel.linear.x = 0.00
+            self.vel.angular.x = 0.00
+            self.cmd_vel_pub.publish(self.vel)
     
-    def search_sr(self):
+    def search_ar(self):
         print("search")
         if self.move_flg:
             if self.detect_target_ar_flg==False:
                 print("search AR_marker")
                 if self.target_action == "right":
+                    print("turn right")
                     self.vel.linear.x = 0.0
-                    self.vel.angular.z = 0.2
+                    self.vel.angular.z = -0.2
                 if self.target_action == "left":
+                    print("turn left")
                     self.vel.linear.x =0.0
-                    self.vel.angular.z  = -0.2
+                    self.vel.angular.z  = 0.2
                 self.cmd_vel_pub.publish(self.vel)
             if self.detect_target_ar_flg:
                 print("detect AR_marker")
                 self.track_flg =True
+        else:
+            self.vel.linear.x = 0.00
+            self.vel.angular.x = 0.00
+            self.cmd_vel_pub.publish(self.vel)
     # def track_ori(self):
     def loop(self):
         self.read_list()
-        self.search_sr()
+        self.search_ar()
         self.track_ar()
         
 if __name__ == '__main__':
