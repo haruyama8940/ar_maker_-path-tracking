@@ -13,8 +13,11 @@ from std_srvs.srv import SetBool, SetBoolResponse, SetBoolRequest
 
 class AR_path_Node():
     def __init__(self):
-        self.ar_maker_sub = rospy.Subscriber("ar_pose_marker", AlvarMarkers,self.ar_pose_callback)
-        self.srv = rospy.Service("move", SetBool, self.callback_srv)
+        self.ar_maker_sub = rospy.Subscriber("ar_pose_marker_bot", AlvarMarkers,self.ar_pose_callback)
+        self.move_srv = rospy.Service("move", SetBool, self.callback_srv)
+        self.stop_srv = rospy.Service("stop", SetBool, self.callback_stop_srv)
+        self.next_srv = rospy.Service("next", SetBool, self.callback_next_srv)
+
         self.cmd_vel_pub =rospy.Publisher("/cmd_vel",Twist,queue_size=10)
         self.ar = AlvarMarkers()
         self.vel = Twist()
@@ -24,11 +27,12 @@ class AR_path_Node():
         self.target_pose_x =0
         #self.target_pose_y
         self.target_pose_z =0
-        self.x_thr = 0.1
-        self.z_thr = 0.18
+        self.liner_thr = 0.2
+        self.ang_thr = 0.2
         self.detect_target_ar_flg =False
         self.move_flg =True
         self.track_flg =False
+        self.z_suc_flg =False
         # self.pub = rospy.Publisher('topic name', String, queue_size=1)
         self.current_num =0
         self.target_id_list = [0,1,2,3,4]
@@ -41,9 +45,9 @@ class AR_path_Node():
         self.ar_maker = self.ar.markers
 
         self.ar_maker_data = data.markers
-        if len(self.ar_maker_data) ==0:
-            self.detect_target_ar_flg=False
-            print("maigo")
+        # if len(self.ar_maker_data) ==0:
+        #     self.detect_target_ar_flg=False
+        #     print("maigo")
             # self.search_ar()
         
         for m in self.ar_maker_data:
@@ -65,6 +69,23 @@ class AR_path_Node():
         resp.message = "catch move_flg !!"
         resp.success = True
         return resp
+    
+    def callback_stop_srv(self,data):
+        resp = SetBoolResponse()
+        resp.message = "catch stop !!"
+        resp.success = True
+        self.vel.linear.x = 0.00
+        self.vel.angular.x = 0.00
+        self.cmd_vel_pub.publish(self.vel)
+
+        return resp
+    def callback_next_srv(self,data):
+        resp = SetBoolResponse()
+        resp.message = "catch next !!"
+        resp.success = True
+        self.current_num = self.current_num + 1
+        self.read_list()
+        return resp
 
     def read_list(self):
         if self.current_num >= len(self.target_id_list):
@@ -79,15 +100,26 @@ class AR_path_Node():
         print("track")
         if self.move_flg:
             if (self.track_flg):
-                print(type(self.ar_pose_x))
-                if (abs(self.ar_pose_z) >= self.z_thr or abs(self.ar_pose_x) >= self.x_thr):
-                    self.vel.linear.x = 0.1 * (self.ar_pose_z - 0)
-                    # self.vel.linear.x =0.1
-                    self.vel.angular.z = -0.1 * 2 * (self.ar_pose_x - 0)
+                # print(type(self.ar_pose_x))
+                if (abs(self.ar_pose_z) >= self.liner_thr or abs(self.ar_pose_x) >= self.ang_thr):
+                    self.vel.linear.x = max(min(0.05 * (self.ar_pose_z - 0),0.2),-0.2)
+                    self.vel.angular.z = max(min(-0.1 * 6 * (self.ar_pose_x - 0),0.2),-0.2)
                     self.cmd_vel_pub.publish(self.vel)
-                    print("move for target AR_marker")
+                #     print("move for target AR_marker")
+                # if (abs(self.ar_pose_x) >= self.ang_thr):
+                #     #self.vel.linear.x = max(min(0.1 * (self.ar_pose_z - 0),0.2),-0.2)
+                #     self.vel.angular.z = max(min(-0.1 * 2 * (self.ar_pose_x - 0),0.2),-0.2)
+                #     self.cmd_vel_pub.publish(self.vel)
+                #     self.z_suc_flg =True
+                #     print("move for z target AR_marker")
+                # elif (self.z_suc_flg and abs(self.ar_pose_z) >= self.liner_thr):
+                #     self.vel.linear.x = max(min(0.1 * (self.ar_pose_z - 0),0.2),-0.2)
+                #     #self.vel.angular.z = max(min(-0.1 * 2 * (self.ar_pose_x - 0),0.2),-0.2)
+                #     self.cmd_vel_pub.publish(self.vel)
+                #     print("move for x target AR_marker")
                 else:
                     self.track_flg = False
+                    self.z_suc_flg =False
                     print("reach target AR_marker !!")
                     # print("read")
                     # self.current_num = self.current_num + 1
@@ -108,7 +140,6 @@ class AR_path_Node():
             self.cmd_vel_pub.publish(self.vel)
     
     def search_ar(self):
-        print("search")
         if self.move_flg:
             if self.detect_target_ar_flg==False:
                 print("search AR_marker")
