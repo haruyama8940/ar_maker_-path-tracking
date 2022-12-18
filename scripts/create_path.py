@@ -52,13 +52,18 @@ class AR_path_Node():
         
         for m in self.ar_maker_data:
             self.ar_id = m.id
-            self.ar_pose_x = m.pose.pose.position.x
-            self.ar_pose_z = m.pose.pose.position.z
-            self.ar_pose_w = m.pose.pose.orientation.w
+            if self.ar_id == self.target_id:
+                print("target_maker")
+                self.detect_target_ar_flg = True
+                self.ar_pose_x = m.pose.pose.position.x
+                self.ar_pose_z = m.pose.pose.position.z
+                self.ar_pose_w = m.pose.pose.orientation.w
+                
             # print("detect id",self.ar_id)
-        if self.ar_id == self.target_id:
-            print("target_maker")
-            self.detect_target_ar_flg = True
+        # if self.ar_id == self.target_id:
+        #     print("target_maker")
+            # self.detect_target_ar_flg = True
+            
         else :
             self.detect_target_ar_flg =False
             self.search_ar()
