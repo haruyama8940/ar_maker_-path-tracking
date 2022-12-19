@@ -24,7 +24,7 @@ class AR_path_Node():
         self.target_pose_x =0
         #self.target_pose_y
         self.target_pose_z =0
-        self.liner_thr = 0.2
+        self.liner_thr = 0.4
         self.ang_thr = 0.2
         self.detect_target_ar_flg =False
         self.move_flg =True
@@ -36,6 +36,7 @@ class AR_path_Node():
         self.target_action_list = ["right","right","left","left","left"]
         self.target_id  =self.target_id_list[self.current_num]
         self.target_action = self.target_action_list[self.current_num]
+        self.target_x_thr_list =[0.8,0.3,0.3,0.3,0.7]
 
     # def ar_pose_callback(self,data):
     #     print("target_id" ,self.target_id)
@@ -101,7 +102,8 @@ class AR_path_Node():
             self.current_num = 0
         self.target_action = self.target_action_list[self.current_num]
         self.target_id = self.target_id_list[self.current_num]
-        print("target_id" ,self.target_id,"target_action" , self.target_action)
+        self.liner_thr = self.target_x_thr_list[self.current_num]
+        print("target_id" ,self.target_id,"target_action" , self.target_action,"x_thr=" , self.liner_thr)
     # def path_function(self):
     #     a = (self.target_pose_z - 0) / (self.target_pose_x - 0)
     
@@ -135,8 +137,6 @@ class AR_path_Node():
                     print("read")
                     self.current_num = self.current_num + 1
                     self.read_list()
-                    self.target_pose_x = 10 
-                    self.target_pose_z = 10
                     self.detect_target_ar_flg =False
                     # self.current_num = self.current_num + 1
                     # self.read_list()
@@ -145,8 +145,8 @@ class AR_path_Node():
                 self.detect_target_ar_flg = False
         else:
             print("track stop")
-            self.vel.linear.x = 0.00
-            self.vel.angular.x = 0.00
+            self.vel.linear.x = 0.000
+            self.vel.angular.x = 0.000
             self.cmd_vel_pub.publish(self.vel)
             self.detect_target_ar_flg = False
     
@@ -169,8 +169,8 @@ class AR_path_Node():
                 self.track_flg =True
         else:
             print("search stop")
-            self.vel.linear.x = 0.00
-            self.vel.angular.x = 0.00
+            self.vel.linear.x = 0.0000
+            self.vel.angular.x = 0.0000
             self.cmd_vel_pub.publish(self.vel)
     # def track_ori(self):
     def loop(self):
